@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+	<PropertyGroup>
+		<VersionPrefix>0.0.1</VersionPrefix>
+		<VersionSuffix>alpha</VersionSuffix>
+
+		<Description>Microcks.Aspire for .NET Demo</Description>
+		<Authors>Sébastien DEGODEZ</Authors>
+
+		<PackageLicenseFile>LICENSE</PackageLicenseFile>
+		<PackageTags>docker;aspire;dotnet;testcontainers;testing;microcks</PackageTags>
+		<RepositoryType>git</RepositoryType>
+		<RepositoryUrl>https://github.com/microcks/microcks-aspire-demo</RepositoryUrl>
+	</PropertyGroup>
+	<PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+	</PropertyGroup>
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="" />
+	<None Include="$(MSBuildThisFileDirectory)LICENSE" Pack="true" PackagePath="" />
+	<PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All"/>
+  </ItemGroup>	
+</Project>

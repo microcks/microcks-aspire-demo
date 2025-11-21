@@ -15,6 +15,8 @@
 //
 //
 
+using System.Net;
+using System.Net.Sockets;
 using Microsoft.Extensions.Configuration;
 using Order.AppHost;
 
@@ -45,6 +47,11 @@ builder.Build().Run();
 /// </summary>
 static void MicrocksUberAutoImport(IDistributedApplicationBuilder builder)
 {
+    var configuration = builder.Configuration;
+    static IPAddress GetLocalIp() =>
+        Dns.GetHostEntry(Dns.GetHostName()).AddressList.FirstOrDefault(ip => ip.AddressFamily is AddressFamily.InterNetwork)
+    ?? throw new Exception("Could not determine local IP address.");
+
     var microcks = builder.AddMicrocks("microcks")
             .WithMainArtifacts(
                 "resources/third-parties/apipastries-openapi.yaml",
@@ -53,11 +60,13 @@ static void MicrocksUberAutoImport(IDistributedApplicationBuilder builder)
             .WithSecondaryArtifacts(
                 "resources/order-service-postman-collection.json",
                 "resources/third-parties/apipastries-postman-collection.json"
-            );
+            )
+            //            .WithHostNetworkAccess()
+            .WithContainerRuntimeArgs("--add-host", "host.docker.internal:" + GetLocalIp());
 
     //
     // Microcks reference - link the Order API project to Microcks
-    microcks.WithHostNetworkAccess("order-api");
+    //microcks.WithHostNetworkAccess("order-api"); // To reach host machine from Microcks container
 
     var orderapi = builder.AddProject<Projects.Order_ServiceApi>("order-api")
         .WithEnvironment("PastryApi:BaseUrl", () =>
@@ -67,7 +76,8 @@ static void MicrocksUberAutoImport(IDistributedApplicationBuilder builder)
 
             return pastryBaseUrl.ToString();
         })
-        .WaitFor(microcks);
+        .WaitFor(microcks)
+        .WithReferenceRelationship(microcks);
 
     microcks.WithReferenceRelationship(orderapi);
 }

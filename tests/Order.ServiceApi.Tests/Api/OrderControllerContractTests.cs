@@ -21,6 +21,10 @@ using Aspire.Hosting;
 using System.Text.Json;
 using Microcks.Aspire.Clients.Model;
 using Order.ServiceApi.Tests.Fixture;
+using Microsoft.Extensions.DependencyInjection;
+using Microcks.Aspire;
+using System.Net;
+using System.Net.Sockets;
 
 namespace Order.ServiceApi.Tests.Api;
 
@@ -38,30 +42,36 @@ public class OrderControllerContractTests
         this.testOutputHelper = testOutputHelper;
     }
 
+
     /// <summary>
     /// By default, we use host.docker.internal to reach the host machine from Microcks container
     /// For podman, you may need to setup host.docker.internal manually with WithHostNetworkAccess
     /// or use host.containers.internal
     /// </summary>
     /// <returns></returns>
-    [Fact]
-    public async Task TestOpenApiContract()
+    [Theory]
+    [InlineData("host.docker.internal")]
+    [InlineData("order-api")]
+    public async Task TestOpenApiContract(string hostname)
     {
         // Arrange
         var app = orderHostAspireFactory.App;
         int port = app.GetEndpoint("order-api").Port;
+
         // Act
         TestRequest request = new()
         {
             ServiceId = "Order Service API:0.1.0",
             RunnerType = TestRunnerType.OPEN_API_SCHEMA,
-            TestEndpoint = $"http://host.docker.internal:{port}/api", // Service DNS and target port
+            TestEndpoint = $"http://{hostname}:{port}/api", // Service DNS and target port
             // FilteredOperations can be used to limit the operations to test
         };
+
         var microcksClient = app.CreateMicrocksClient("microcks");
 
         var testResult = await microcksClient.TestEndpointAsync(request, TestContext.Current.CancellationToken);
 
+        testOutputHelper.WriteLine($"Testing Order API via hostname '{hostname}'");
         // Assert
         // You may inspect complete response object with following:
         var json = JsonSerializer.Serialize(testResult, new JsonSerializerOptions { WriteIndented = true });
@@ -75,6 +85,7 @@ public class OrderControllerContractTests
         Assert.Single(testResult.TestCaseResults!);
 
     }
+
 
     [Fact]
     public async Task TestOpenAPIContractAndBusinessConformance()

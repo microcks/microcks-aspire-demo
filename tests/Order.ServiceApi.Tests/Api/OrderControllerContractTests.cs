@@ -15,37 +15,49 @@
 //
 //
 
-using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Testing;
 using Aspire.Hosting;
 using System.Text.Json;
 using Microcks.Aspire.Clients.Model;
 using Order.ServiceApi.Tests.Fixture;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Order.ServiceApi.Tests.Api;
 
 /// <summary>
 /// Contract tests for the Order API using Microcks.
 /// </summary>
-[Collection(OrderHostAspireFactory.CollectionName)]
-public class OrderControllerContractTests
+/// <remarks>
+/// Initializes a new instance of the <see cref="OrderControllerContractTests"/> class.
+/// </remarks>
+/// <param name="fixture">The Aspire factory fixture.</param>
+/// <param name="testOutputHelper">The test output helper.</param>
+public sealed class OrderControllerContractTests(
+    OrderHostAspireFactory fixture,
+    ITestOutputHelper testOutputHelper)
+    : IClassFixture<OrderHostAspireFactory>, IAsyncLifetime
 {
-    private readonly OrderHostAspireFactory orderHostAspireFactory;
-    private readonly ITestOutputHelper testOutputHelper;
+    private readonly OrderHostAspireFactory _fixture = fixture;
+    private readonly ITestOutputHelper _testOutputHelper = testOutputHelper;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="OrderControllerContractTests"/> class.
+    /// Initialize the fixture before any test runs.
     /// </summary>
-    /// <param name="orderHostAspireFactory">The Aspire factory fixture.</param>
-    /// <param name="testOutputHelper">The test output helper.</param>
-    public OrderControllerContractTests(
-        OrderHostAspireFactory orderHostAspireFactory,
-        ITestOutputHelper testOutputHelper)
+    /// <returns>ValueTask representing the asynchronous initialization operation.</returns>
+    public async ValueTask InitializeAsync()
     {
-        this.orderHostAspireFactory = orderHostAspireFactory;
-        this.testOutputHelper = testOutputHelper;
+        await _fixture.InitializeAsync(_testOutputHelper);
     }
 
+    /// <summary>
+    /// Dispose resources used by the fixture.
+    /// </summary>
+    /// <returns>ValueTask representing the asynchronous dispose operation.</returns>
+    public async ValueTask DisposeAsync()
+    {
+        await _fixture.DisposeAsync();
+    }
 
     /// <summary>
     /// By default, we use host.docker.internal to reach the host machine from Microcks container
@@ -59,7 +71,7 @@ public class OrderControllerContractTests
     public async Task TestOpenApiContract(string hostname)
     {
         // Arrange
-        var app = orderHostAspireFactory.App;
+        var app = _fixture.App;
         var endpoint = app.GetEndpoint("order-api");
         int port = endpoint.Port;
 
@@ -74,13 +86,14 @@ public class OrderControllerContractTests
 
         var microcksClient = app.CreateMicrocksClient("microcks");
 
+        var logger = app.Services.GetRequiredService<ILogger<OrderControllerContractTests>>();
+        logger.LogInformation("Testing Order API via hostname '{Hostname}' on port {Port}", hostname, port);
         var testResult = await microcksClient.TestEndpointAsync(request, TestContext.Current.CancellationToken);
 
-        testOutputHelper.WriteLine($"Testing Order API via hostname '{hostname}'");
         // Assert
         // You may inspect complete response object with following:
         var json = JsonSerializer.Serialize(testResult, new JsonSerializerOptions { WriteIndented = true });
-        testOutputHelper.WriteLine(json);
+        _testOutputHelper.WriteLine(json);
 
         Assert.True(testResult.Success);
 
@@ -91,7 +104,6 @@ public class OrderControllerContractTests
 
     }
 
-
     /// <summary>
     /// Tests the OpenAPI contract and business conformance of the Order API.
     /// </summary>
@@ -99,7 +111,7 @@ public class OrderControllerContractTests
     public async Task TestOpenAPIContractAndBusinessConformance()
     {
         // Arrange
-        var app = orderHostAspireFactory.App;
+        var app = _fixture.App;
 
         int port = app.GetEndpoint("order-api").Port;
         TestRequest request = new()
@@ -113,7 +125,7 @@ public class OrderControllerContractTests
 
         // You may inspect complete response object with following:
         var json = JsonSerializer.Serialize(testResult, new JsonSerializerOptions { WriteIndented = true });
-        testOutputHelper.WriteLine(json);
+        _testOutputHelper.WriteLine(json);
 
         Assert.False(testResult.InProgress, "Test should not be in progress");
         Assert.True(testResult.Success, "Test should be successful");

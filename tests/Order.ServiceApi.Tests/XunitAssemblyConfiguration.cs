@@ -15,12 +15,6 @@
 //
 //
 
-namespace Order.ServiceApi.Tests.Fixture;
+using Xunit;
 
-/// <summary>
-/// Collection definition for xUnit test collection using Aspire infrastructure.
-/// </summary>
-[CollectionDefinition(OrderHostAspireFactory.CollectionName)]
-public class AspireCollection : ICollectionFixture<OrderHostAspireFactory>
-{
-}
+[assembly: CaptureConsole]

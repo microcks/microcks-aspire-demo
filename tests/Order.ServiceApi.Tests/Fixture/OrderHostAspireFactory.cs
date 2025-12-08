@@ -26,14 +26,10 @@ namespace Order.ServiceApi.Tests.Fixture;
 
 /// <summary>
 /// Factory for creating and managing the Aspire distributed application for integration tests.
+/// This fixture is used with IClassFixture per test class.
 /// </summary>
-public class OrderHostAspireFactory : IAsyncLifetime
+public sealed class OrderHostAspireFactory : IAsyncDisposable
 {
-    /// <summary>
-    /// CollectionName for ICollectionFixture
-    /// </summary>
-    public const string CollectionName = "Microcks Aspire Collection";
-
     /// <summary>
     /// Gets or sets the Microcks resource used for API mocking.
     /// </summary>
@@ -45,36 +41,34 @@ public class OrderHostAspireFactory : IAsyncLifetime
     public DistributedApplication App { get; private set; } = default!;
 
     /// <summary>
-    /// Disposes of the distributed application resources.
-    /// </summary>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    public async ValueTask DisposeAsync()
-    {
-        await this.App.StopAsync();
-        await this.App.DisposeAsync();
-    }
-
-    /// <summary>
     /// Initializes the distributed application for testing.
     /// </summary>
+    /// <param name="testOutputHelper">The test output helper for logging.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    public async ValueTask InitializeAsync()
-    {
-        await this.InitializeDistributedApplication();
-    }
-
-    private async Task InitializeDistributedApplication()
+    public async ValueTask InitializeAsync(ITestOutputHelper testOutputHelper)
     {
         var builder = await DistributedApplicationTestingBuilder
             .CreateAsync<Order_AppHost>(TestContext.Current.CancellationToken);
 
+        // Enable resource logging to see container logs in console
         builder.Services.AddLogging(logging =>
         {
-            logging.SetMinimumLevel(LogLevel.Debug);
-            // Override the logging filters from the app's configuration
-            logging.AddFilter(builder.Environment.ApplicationName, LogLevel.Debug);
+            logging.SetMinimumLevel(LogLevel.Information);
             logging.AddFilter("Aspire.", LogLevel.Debug);
-            // To output logs to the xUnit.net ITestOutputHelper, consider adding a package from https://www.nuget.org/packages?q=xunit+logging
+            logging.AddFilter("Aspire.Hosting", LogLevel.Debug);
+
+            // Add xUnit logging if test output helper is available
+            logging.AddXUnit(testOutputHelper, options =>
+            {
+                options.TimestampFormat = "HH:mm:ss.fff ";
+                options.IncludeScopes = false;
+            });
+        });
+
+        // Enable streaming resource logs (container logs)
+        builder.Services.Configure<DistributedApplicationOptions>(options =>
+        {
+            options.DisableDashboard = true;
         });
 
         this.MicrocksResource = builder.Resources.OfType<MicrocksResource>().Single();
@@ -94,5 +88,31 @@ public class OrderHostAspireFactory : IAsyncLifetime
             "order-api",
             TestContext.Current.CancellationToken)
             .ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// Disposes of the distributed application resources.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (App is not null)
+            {
+                await App.StopAsync(TestContext.Current.CancellationToken)
+                    .ConfigureAwait(false);
+                await App.DisposeAsync();
+            }
+        }
+        catch
+        {
+            // swallow, we're tearing down tests
+        }
+
+        if (App is not null)
+        {
+            await App.DisposeAsync();
+        }
     }
 }

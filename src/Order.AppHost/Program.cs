@@ -32,6 +32,10 @@ var microcks = builder.AddMicrocks("microcks")
             "resources/order-service-postman-collection.json",
             "resources/third-parties/apipastries-postman-collection.json"
         )
+        .WithPostmanRunner(configurePostman =>
+        {
+            configurePostman.WithContainerRuntimeArgs("--add-host=host.docker.internal:host-gateway");
+        })
         .WithLifetime(ContainerLifetime.Persistent)
         .WithHostNetworkAccess()
         .WithHostNetworkAccess("order-api");

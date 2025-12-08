@@ -22,7 +22,7 @@ To run the application locally, simply start the Aspire AppHost project. It will
 Command :
 
 ```shell
-dotnet run --project src/Order.AppHost/Order.AppHost.csproj --launch-profile "DockerCompose"
+dotnet run --project src/Order.AppHost/Order.AppHost.csproj
 ```
 
 Once the AppHost project is running, you can access the [Aspire Dashboard](http://localhost:15026) to visualize and manage all the application's services and dependencies.

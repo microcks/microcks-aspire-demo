@@ -26,8 +26,16 @@ using OrderModel = Order.ServiceApi.UseCases.Model.Order;
 
 namespace Order.ServiceApi.Endpoints;
 
+/// <summary>
+/// Extension methods for mapping order-related endpoints.
+/// </summary>
 public static class OrderEndpoints
 {
+    /// <summary>
+    /// Maps the order management endpoints to the application.
+    /// </summary>
+    /// <param name="app">The web application.</param>
+    /// <returns>The web application with order endpoints mapped.</returns>
     public static WebApplication MapOrderEndpoints(this WebApplication app)
     {
         var root = app.MapGroup("/api/orders")

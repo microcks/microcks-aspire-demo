@@ -17,11 +17,26 @@
 
 namespace Order.ServiceApi.UseCases.Model;
 
+/// <summary>
+/// Represents a product that is unavailable for order.
+/// </summary>
 public sealed class UnavailableProduct
 {
+    /// <summary>
+    /// Gets the name of the unavailable product.
+    /// </summary>
     public string ProductName { get; }
+
+    /// <summary>
+    /// Gets the details about why the product is unavailable.
+    /// </summary>
     public string Details { get; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="UnavailableProduct"/> class.
+    /// </summary>
+    /// <param name="productName">The name of the unavailable product.</param>
+    /// <param name="details">The details about why the product is unavailable.</param>
     public UnavailableProduct(string productName, string details)
     {
         ProductName = productName;

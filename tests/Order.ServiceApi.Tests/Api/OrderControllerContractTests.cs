@@ -21,19 +21,23 @@ using Aspire.Hosting;
 using System.Text.Json;
 using Microcks.Aspire.Clients.Model;
 using Order.ServiceApi.Tests.Fixture;
-using Microsoft.Extensions.DependencyInjection;
-using Microcks.Aspire;
-using System.Net;
-using System.Net.Sockets;
 
 namespace Order.ServiceApi.Tests.Api;
 
+/// <summary>
+/// Contract tests for the Order API using Microcks.
+/// </summary>
 [Collection(OrderHostAspireFactory.CollectionName)]
 public class OrderControllerContractTests
 {
     private readonly OrderHostAspireFactory orderHostAspireFactory;
     private readonly ITestOutputHelper testOutputHelper;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OrderControllerContractTests"/> class.
+    /// </summary>
+    /// <param name="orderHostAspireFactory">The Aspire factory fixture.</param>
+    /// <param name="testOutputHelper">The test output helper.</param>
     public OrderControllerContractTests(
         OrderHostAspireFactory orderHostAspireFactory,
         ITestOutputHelper testOutputHelper)
@@ -56,7 +60,8 @@ public class OrderControllerContractTests
     {
         // Arrange
         var app = orderHostAspireFactory.App;
-        int port = app.GetEndpoint("order-api").Port;
+        var endpoint = app.GetEndpoint("order-api");
+        int port = endpoint.Port;
 
         // Act
         TestRequest request = new()
@@ -87,6 +92,9 @@ public class OrderControllerContractTests
     }
 
 
+    /// <summary>
+    /// Tests the OpenAPI contract and business conformance of the Order API.
+    /// </summary>
     [Fact]
     public async Task TestOpenAPIContractAndBusinessConformance()
     {

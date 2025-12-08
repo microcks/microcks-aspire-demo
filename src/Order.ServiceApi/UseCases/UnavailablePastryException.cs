@@ -19,10 +19,21 @@ using System;
 
 namespace Order.ServiceApi.UseCases;
 
+/// <summary>
+/// Exception thrown when a pastry is unavailable for order.
+/// </summary>
 public class UnavailablePastryException : Exception
 {
+    /// <summary>
+    /// Gets the name of the unavailable product.
+    /// </summary>
     public string Product { get; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="UnavailablePastryException"/> class.
+    /// </summary>
+    /// <param name="product">The name of the unavailable product.</param>
+    /// <param name="message">The exception message.</param>
     public UnavailablePastryException(string product, string message) : base(message)
     {
         Product = product;

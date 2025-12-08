@@ -17,7 +17,13 @@
 
 namespace Order.ServiceApi.UseCases.Model;
 
+/// <summary>
+/// Represents the status of an order.
+/// </summary>
 public enum OrderStatus
 {
+    /// <summary>
+    /// The order has been created.
+    /// </summary>
     Created,
 }

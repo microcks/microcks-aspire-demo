@@ -26,6 +26,7 @@ builder.Services.AddTransient<OrderUseCase>();
 var configuration = builder.Configuration;
 var pastryApiSection = configuration.GetRequiredSection("PastryApi");
 var pastryApiUrl = pastryApiSection.GetValue<string>("BaseUrl");
+
 if (string.IsNullOrWhiteSpace(pastryApiUrl))
 {
     throw new InvalidOperationException("PastryApi:BaseUrl configuration is required and cannot be null or empty.");
@@ -56,4 +57,10 @@ app.MapOrderEndpoints();
 
 app.Run();
 
-public partial class Program { }
+namespace Order.ServiceApi
+{
+    /// <summary>
+    /// The main entry point class for the Order Service API.
+    /// </summary>
+    public partial class Program { }
+}

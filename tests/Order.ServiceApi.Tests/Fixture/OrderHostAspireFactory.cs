@@ -18,10 +18,15 @@
 using Aspire.Hosting;
 using Aspire.Hosting.Testing;
 using Microcks.Aspire;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Projects;
 
 namespace Order.ServiceApi.Tests.Fixture;
 
+/// <summary>
+/// Factory for creating and managing the Aspire distributed application for integration tests.
+/// </summary>
 public class OrderHostAspireFactory : IAsyncLifetime
 {
     /// <summary>
@@ -29,6 +34,9 @@ public class OrderHostAspireFactory : IAsyncLifetime
     /// </summary>
     public const string CollectionName = "Microcks Aspire Collection";
 
+    /// <summary>
+    /// Gets or sets the Microcks resource used for API mocking.
+    /// </summary>
     public required MicrocksResource MicrocksResource;
 
     /// <summary>
@@ -36,12 +44,20 @@ public class OrderHostAspireFactory : IAsyncLifetime
     /// </summary>
     public DistributedApplication App { get; private set; } = default!;
 
+    /// <summary>
+    /// Disposes of the distributed application resources.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     public async ValueTask DisposeAsync()
     {
         await this.App.StopAsync();
         await this.App.DisposeAsync();
     }
 
+    /// <summary>
+    /// Initializes the distributed application for testing.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     public async ValueTask InitializeAsync()
     {
         await this.InitializeDistributedApplication();
@@ -51,6 +67,15 @@ public class OrderHostAspireFactory : IAsyncLifetime
     {
         var builder = await DistributedApplicationTestingBuilder
             .CreateAsync<Order_AppHost>(TestContext.Current.CancellationToken);
+
+        builder.Services.AddLogging(logging =>
+        {
+            logging.SetMinimumLevel(LogLevel.Debug);
+            // Override the logging filters from the app's configuration
+            logging.AddFilter(builder.Environment.ApplicationName, LogLevel.Debug);
+            logging.AddFilter("Aspire.", LogLevel.Debug);
+            // To output logs to the xUnit.net ITestOutputHelper, consider adding a package from https://www.nuget.org/packages?q=xunit+logging
+        });
 
         this.MicrocksResource = builder.Resources.OfType<MicrocksResource>().Single();
 

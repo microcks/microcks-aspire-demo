@@ -17,4 +17,9 @@
 
 namespace Order.ServiceApi.UseCases.Model;
 
+/// <summary>
+/// Represents a product and its quantity in an order.
+/// </summary>
+/// <param name="ProductName">The name of the product.</param>
+/// <param name="Quantity">The quantity of the product.</param>
 public sealed record ProductQuantity(string ProductName, int Quantity);

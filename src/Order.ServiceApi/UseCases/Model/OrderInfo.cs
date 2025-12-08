@@ -19,9 +19,23 @@ using System.Collections.Generic;
 
 namespace Order.ServiceApi.UseCases.Model;
 
+/// <summary>
+/// Represents the information needed to create an order.
+/// </summary>
 public sealed record OrderInfo
 {
-    public string CustomerId { get; init; }
-    public IReadOnlyList<ProductQuantity> ProductQuantities { get; init; }
+    /// <summary>
+    /// Gets the customer identifier who is placing the order.
+    /// </summary>
+    public required string CustomerId { get; init; }
+
+    /// <summary>
+    /// Gets the list of products and their quantities to order.
+    /// </summary>
+    public required IReadOnlyList<ProductQuantity> ProductQuantities { get; init; }
+
+    /// <summary>
+    /// Gets the total price of the order.
+    /// </summary>
     public double TotalPrice { get; init; }
 }

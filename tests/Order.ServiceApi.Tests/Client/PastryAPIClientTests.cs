@@ -25,18 +25,27 @@ using Order.ServiceApi.Tests.Fixture;
 
 namespace Order.ServiceApi.Tests.Client;
 
+/// <summary>
+/// Integration tests for the PastryAPIClient.
+/// </summary>
+/// <remarks>
+/// Initializes a new instance of the <see cref="PastryAPIClientTests"/> class.
+/// </remarks>
+/// <param name="orderHostAspireFactory">The Aspire factory fixture.</param>
 [Collection(OrderHostAspireFactory.CollectionName)]
-public class PastryAPIClientTests : IAsyncLifetime
+public class PastryAPIClientTests(OrderHostAspireFactory orderHostAspireFactory)
+    : IAsyncLifetime
 {
-    private readonly OrderHostAspireFactory orderHostAspireFactory;
+    private readonly OrderHostAspireFactory orderHostAspireFactory = orderHostAspireFactory;
 
-    public WebApplicationFactory<Program>? WebApplicationFactory { get; private set; }
+    /// <summary>
+    /// Gets or sets the web application factory for testing.
+    /// </summary>
+    public WebApplicationFactory<Order.ServiceApi.Program>? WebApplicationFactory { get; private set; }
 
-    public PastryAPIClientTests(OrderHostAspireFactory orderHostAspireFactory)
-    {
-        this.orderHostAspireFactory = orderHostAspireFactory;
-    }
-
+    /// <summary>
+    /// Tests that ListPastriesAsync returns pastries filtered by size.
+    /// </summary>
     [Fact]
     public async Task TestPastryAPIClient_ListPastriesAsync()
     {
@@ -64,6 +73,9 @@ public class PastryAPIClientTests : IAsyncLifetime
         Assert.True(isVerified, "Pastry API should be verified successfully");
     }
 
+    /// <summary>
+    /// Tests that GetPastryByNameAsync returns the correct pastry by name.
+    /// </summary>
     [Fact]
     public async Task TestPastryAPIClient_GetPastryByNameAsync()
     {
@@ -102,6 +114,10 @@ public class PastryAPIClientTests : IAsyncLifetime
         Assert.Equal(initialInvocationCount + 3, finalInvocationCount);
     }
 
+    /// <summary>
+    /// Initializes the test by setting up the web application factory.
+    /// </summary>
+    /// <returns>A completed value task.</returns>
     public ValueTask InitializeAsync()
     {
         // Get Microcks Pastry API mock endpoint
@@ -123,6 +139,10 @@ public class PastryAPIClientTests : IAsyncLifetime
         return ValueTask.CompletedTask;
     }
 
+    /// <summary>
+    /// Disposes of the test resources.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     public async ValueTask DisposeAsync()
     {
         WebApplicationFactory?.DisposeAsync();

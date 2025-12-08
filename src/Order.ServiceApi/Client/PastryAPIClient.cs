@@ -26,11 +26,21 @@ public class PastryAPIClient
 {
     private readonly HttpClient _httpClient;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PastryAPIClient"/> class.
+    /// </summary>
+    /// <param name="httpClient">The HTTP client to use for requests.</param>
     public PastryAPIClient(HttpClient httpClient)
     {
         _httpClient = httpClient;
     }
 
+    /// <summary>
+    /// Lists all pastries of a given size.
+    /// </summary>
+    /// <param name="size">The size filter (S, M, L).</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A list of pastries matching the size.</returns>
     public async Task<List<Pastry>> ListPastriesAsync(string size, CancellationToken cancellationToken = default)
     {
         // The leading / cause the path to be replaced after the host
@@ -41,6 +51,12 @@ public class PastryAPIClient
         return await response.Content.ReadFromJsonAsync<List<Pastry>>(cancellationToken) ?? new List<Pastry>();
     }
 
+    /// <summary>
+    /// Gets a pastry by its name.
+    /// </summary>
+    /// <param name="pastryName">The name of the pastry.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The pastry with the specified name.</returns>
     public async Task<Pastry> GetPastryByNameAsync(string pastryName, CancellationToken cancellationToken)
     {
         // The leading / cause the path to be replaced after the host

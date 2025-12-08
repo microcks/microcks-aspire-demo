@@ -15,6 +15,7 @@
 //
 //
 
+using Microsoft.Extensions.Logging;
 using Order.ServiceApi.Client;
 using Order.ServiceApi.Client.Model;
 using Order.ServiceApi.UseCases.Model;
@@ -22,11 +23,19 @@ using OrderModel = Order.ServiceApi.UseCases.Model.Order;
 
 namespace Order.ServiceApi.UseCases;
 
+/// <summary>
+/// Use case for handling order operations.
+/// </summary>
 public class OrderUseCase
 {
     private readonly ILogger<OrderUseCase> _logger;
     private readonly PastryAPIClient _pastryAPIClient;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OrderUseCase"/> class.
+    /// </summary>
+    /// <param name="logger">The logger instance.</param>
+    /// <param name="pastryAPIClient">The pastry API client.</param>
     public OrderUseCase(ILogger<OrderUseCase> logger, PastryAPIClient pastryAPIClient)
     {
         _logger = logger;
@@ -39,6 +48,7 @@ public class OrderUseCase
     /// sake of simplicity, we'll just check that products (here pastries) are all available.
     /// </summary>
     /// <param name="orderInfo">The order information.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A created Order with incoming info, new unique identifier and created status.</returns>
     /// <exception cref="UnavailablePastryException">Thrown when a pastry is unavailable.</exception>
     /// <exception cref="Exception">Thrown for general errors.</exception>

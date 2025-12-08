@@ -17,11 +17,23 @@
 
 namespace Order.ServiceApi.Client.Model;
 
+/// <summary>
+/// Represents a pastry product.
+/// </summary>
+/// <param name="Name">The name of the pastry.</param>
+/// <param name="Description">The description of the pastry.</param>
+/// <param name="Size">The size of the pastry (S, M, L).</param>
+/// <param name="Price">The price of the pastry.</param>
+/// <param name="Status">The availability status of the pastry.</param>
 public record Pastry(string Name,
                      string Description,
                      string Size,
                      decimal Price,
                      string Status)
 {
+    /// <summary>
+    /// Checks if the pastry is available.
+    /// </summary>
+    /// <returns>True if the pastry is available; otherwise, false.</returns>
     public bool IsAvailable() => Status.Equals("AVAILABLE", System.StringComparison.InvariantCultureIgnoreCase);
 }

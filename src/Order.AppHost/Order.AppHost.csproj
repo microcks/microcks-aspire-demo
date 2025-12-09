@@ -15,4 +15,10 @@
     <ProjectReference Include="../Order.ServiceApi/Order.ServiceApi.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="resources\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  
 </Project>

@@ -24,6 +24,7 @@ builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
 });
 
 var microcks = builder.AddMicrocks("microcks")
+        .WithPostmanRunner()
         .WithMainArtifacts(
             "resources/third-parties/apipastries-openapi.yaml",
             "resources/order-service-openapi.yaml"
@@ -31,14 +32,7 @@ var microcks = builder.AddMicrocks("microcks")
         .WithSecondaryArtifacts(
             "resources/order-service-postman-collection.json",
             "resources/third-parties/apipastries-postman-collection.json"
-        )
-        .WithPostmanRunner(configurePostman =>
-        {
-            configurePostman.WithContainerRuntimeArgs("--add-host=host.docker.internal:host-gateway");
-        })
-        .WithLifetime(ContainerLifetime.Persistent)
-        .WithHostNetworkAccess()
-        .WithHostNetworkAccess("order-api");
+        );
 
 var orderapi = builder.AddProject<Projects.Order_ServiceApi>("order-api")
     .WithEnvironment("PastryApi:BaseUrl", () =>

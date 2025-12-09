@@ -17,6 +17,7 @@
 
 using Aspire.Hosting.Testing;
 using Aspire.Hosting;
+using Aspire.Hosting.ApplicationModel;
 using System.Text.Json;
 using Microcks.Aspire.Clients.Model;
 using Order.ServiceApi.Tests.Fixture;
@@ -33,6 +34,7 @@ namespace Order.ServiceApi.Tests.Api;
 /// </remarks>
 /// <param name="fixture">The Aspire factory fixture.</param>
 /// <param name="testOutputHelper">The test output helper.</param>
+[Collection("DisableParallelization")]
 public sealed class OrderControllerContractTests(
     OrderHostAspireFactory fixture,
     ITestOutputHelper testOutputHelper)
@@ -60,34 +62,32 @@ public sealed class OrderControllerContractTests(
     }
 
     /// <summary>
-    /// By default, we use host.docker.internal to reach the host machine from Microcks container
-    /// For podman, you may need to setup host.docker.internal manually with WithHostNetworkAccess
-    /// or use host.containers.internal
+    /// Tests the OpenAPI contract of the Order API.
+    /// Uses GetEndpointForNetwork to get the endpoint that Microcks (running in a container)
+    /// can access from the Aspire container network.
     /// </summary>
     /// <returns></returns>
-    [Theory]
-    [InlineData("host.docker.internal")]
-    [InlineData("order-api")]
-    public async Task TestOpenApiContract(string hostname)
+    [Fact]
+    public async Task TestOpenApiContract()
     {
         // Arrange
         var app = _fixture.App;
-        var endpoint = app.GetEndpoint("order-api");
-        int port = endpoint.Port;
 
-        // Act
+        // Use GetEndpointForNetwork with the container network context so that Microcks (running in a container)
+        // can access the order-api service from the Aspire container network
+        Uri endpoint = app.GetEndpointForNetwork("order-api", KnownNetworkIdentifiers.DefaultAspireContainerNetwork);
+
         TestRequest request = new()
         {
             ServiceId = "Order Service API:0.1.0",
             RunnerType = TestRunnerType.OPEN_API_SCHEMA,
-            TestEndpoint = $"http://{hostname}:{port}/api", // Service DNS and target port
-            // FilteredOperations can be used to limit the operations to test
+            TestEndpoint = $"{endpoint.Scheme}://{endpoint.Host}:{endpoint.Port}/api",
         };
 
         var microcksClient = app.CreateMicrocksClient("microcks");
 
         var logger = app.Services.GetRequiredService<ILogger<OrderControllerContractTests>>();
-        logger.LogInformation("Testing Order API via hostname '{Hostname}' on port {Port}", hostname, port);
+        logger.LogInformation("Testing Order API via endpoint '{Endpoint}'", endpoint);
         var testResult = await microcksClient.TestEndpointAsync(request, TestContext.Current.CancellationToken);
 
         // Assert
@@ -95,13 +95,10 @@ public sealed class OrderControllerContractTests(
         var json = JsonSerializer.Serialize(testResult, new JsonSerializerOptions { WriteIndented = true });
         _testOutputHelper.WriteLine(json);
 
-        Assert.True(testResult.Success);
-
         Assert.False(testResult.InProgress, "Test should not be in progress");
         Assert.True(testResult.Success, "Test should be successful");
 
         Assert.Single(testResult.TestCaseResults!);
-
     }
 
     /// <summary>
@@ -113,12 +110,15 @@ public sealed class OrderControllerContractTests(
         // Arrange
         var app = _fixture.App;
 
-        int port = app.GetEndpoint("order-api").Port;
+        // Use GetEndpointForNetwork with the container network context so that Microcks (running in a container)
+        // can access the order-api service from the Aspire container network (aspire.dev.internal)
+        Uri endpoint = app.GetEndpointForNetwork("order-api", KnownNetworkIdentifiers.DefaultAspireContainerNetwork);
+
         TestRequest request = new()
         {
             ServiceId = "Order Service API:0.1.0",
             RunnerType = TestRunnerType.OPEN_API_SCHEMA,
-            TestEndpoint = $"http://host.docker.internal:{port}/api",
+            TestEndpoint = $"{endpoint.Scheme}://{endpoint.Host}:{endpoint.Port}/api",
         };
         var microcksClient = app.CreateMicrocksClient("microcks");
         var testResult = await microcksClient.TestEndpointAsync(request, TestContext.Current.CancellationToken);

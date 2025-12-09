@@ -17,6 +17,7 @@
 
 using Aspire.Hosting.Testing;
 using Aspire.Hosting;
+using Aspire.Hosting.ApplicationModel;
 using System.Text.Json;
 using Microcks.Aspire.Clients.Model;
 using Order.ServiceApi.Tests.Fixture;
@@ -34,6 +35,7 @@ namespace Order.ServiceApi.Tests.Api;
 /// </remarks>
 /// <param name="fixture">The Aspire factory fixture.</param>
 /// <param name="testOutputHelper">The test output helper.</param>
+[Collection("DisableParallelization")]
 public sealed class OrderControllerPostmanContractTests(
     OrderHostAspireFactory fixture,
     ITestOutputHelper testOutputHelper)
@@ -73,22 +75,24 @@ public sealed class OrderControllerPostmanContractTests(
     {
         // Arrange
         var app = _fixture.App;
-        var endpoint = app.GetEndpoint("order-api");
-        int port = endpoint.Port;
+
+        // Use GetEndpointForNetwork with the container network context so that Microcks (running in a container)
+        // can access the order-api service from the Aspire container network
+        Uri endpoint = app.GetEndpointForNetwork("order-api", KnownNetworkIdentifiers.DefaultAspireContainerNetwork);
 
         // Act - Ask for a Postman Collection script conformance to be launched.
         TestRequest request = new()
         {
             ServiceId = "Order Service API:0.1.0",
             RunnerType = TestRunnerType.POSTMAN, // 👈 Use POSTMAN runner for business conformance
-            TestEndpoint = $"http://host.docker.internal:{port}/api",
+            TestEndpoint = $"{endpoint.Scheme}://{endpoint.Host}:{endpoint.Port}/api",
             Timeout = TimeSpan.FromSeconds(5)
         };
 
         var microcksClient = app.CreateMicrocksClient("microcks");
 
         var logger = app.Services.GetRequiredService<ILogger<OrderControllerPostmanContractTests>>();
-        logger.LogInformation("Testing Order API Postman contract via hostname 'host.docker.internal' on port {Port}", port);
+        logger.LogInformation("Testing Order API Postman contract via endpoint '{Endpoint}'", endpoint);
 
         var testResult = await microcksClient.TestEndpointAsync(request, TestContext.Current.CancellationToken);
 

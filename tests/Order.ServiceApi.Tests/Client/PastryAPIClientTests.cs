@@ -33,6 +33,7 @@ namespace Order.ServiceApi.Tests.Client;
 /// </remarks>
 /// <param name="fixture">The Aspire factory fixture.</param>
 /// <param name="testOutputHelper">The test output helper.</param>
+[Collection("DisableParallelization")]
 public sealed class PastryAPIClientTests(
     OrderHostAspireFactory fixture,
     ITestOutputHelper testOutputHelper)

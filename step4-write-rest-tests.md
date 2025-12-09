@@ -333,22 +333,21 @@ Microcks Aspire integration provides another approach by letting you reuse the O
 Let's review the test class `OrderControllerContractTests` under `tests/Order.ServiceApi.Tests/Api`:
 
 ```csharp
-[Theory]
-[InlineData("host.docker.internal")]
-[InlineData("order-api")]
-public async Task TestOpenApiContract(string hostname)
+[Fact]
+public async Task TestOpenApiContract()
 {
     // Arrange
     var app = _fixture.App;
-    var endpoint = app.GetEndpoint("order-api");
-    int port = endpoint.Port;
-
-    // Act
+    
+    // Use GetEndpointForNetwork with the container network context so that Microcks (running in a container)
+    // can access the order-api service from the Aspire container network
+    Uri endpoint = app.GetEndpointForNetwork("order-api", KnownNetworkIdentifiers.DefaultAspireContainerNetwork);
+    
     TestRequest request = new()
     {
         ServiceId = "Order Service API:0.1.0",
         RunnerType = TestRunnerType.OPEN_API_SCHEMA,
-        TestEndpoint = $"http://{hostname}:{port}/api",
+        TestEndpoint = $"{endpoint.Scheme}://{endpoint.Host}:{endpoint.Port}/api",
     };
 
     var microcksClient = app.CreateMicrocksClient("microcks");
@@ -368,7 +367,7 @@ Here, we're using a Microcks-provided `TestRequest` object that allows us to spe
 
 * We ask for testing our endpoint against the service interface of `Order Service API` in version `0.1.0`. These are the identifiers found in the `order-service-openapi.yaml` file.
 * We ask Microcks to validate the `OpenAPI Schema` conformance by specifying a `runnerType`.
-* We ask Microcks to validate the endpoint on the dynamic port provided by Aspire. We use either `host.docker.internal` for Docker or the service name `order-api` with Aspire's `WithHostNetworkAccess`.
+* We use `GetEndpointForNetwork` with `KnownNetworkIdentifiers.DefaultAspireContainerNetwork` to get an endpoint that Microcks (running in a container) can access. Aspire automatically manages the hostname resolution across all environments (Mac, Windows, Linux, GitHub Actions).
 
 Finally, we're retrieving a `TestResult` from Microcks, and we can assert things on this result, checking it's a success.
 
@@ -451,15 +450,17 @@ public sealed class OrderControllerPostmanContractTests(
     {
         // Arrange
         var app = _fixture.App;
-        var endpoint = app.GetEndpoint("order-api");
-        int port = endpoint.Port;
+        
+        // Use GetEndpointForNetwork with the container network context so that Microcks (running in a container)
+        // can access the order-api service from the Aspire container network
+        Uri endpoint = app.GetEndpointForNetwork("order-api", KnownNetworkIdentifiers.DefaultAspireContainerNetwork);
 
         // Act - Ask for a Postman Collection script conformance to be launched.
         TestRequest request = new()
         {
             ServiceId = "Order Service API:0.1.0",
             RunnerType = TestRunnerType.POSTMAN, // 👈 Use POSTMAN runner for business conformance
-            TestEndpoint = $"http://host.docker.internal:{port}/api",
+            TestEndpoint = $"{endpoint.Scheme}://{endpoint.Host}:{endpoint.Port}/api",
             Timeout = TimeSpan.FromSeconds(5)
         };
 
@@ -503,13 +504,16 @@ public async Task TestOpenAPIContractAndBusinessConformance()
 {
     // Arrange
     var app = _fixture.App;
-    int port = app.GetEndpoint("order-api").Port;
+    
+    // Use GetEndpointForNetwork with the container network context so that Microcks (running in a container)
+    // can access the order-api service from the Aspire container network
+    Uri endpoint = app.GetEndpointForNetwork("order-api", KnownNetworkIdentifiers.DefaultAspireContainerNetwork);
     
     TestRequest request = new()
     {
         ServiceId = "Order Service API:0.1.0",
         RunnerType = TestRunnerType.OPEN_API_SCHEMA,
-        TestEndpoint = $"http://host.docker.internal:{port}/api",
+        TestEndpoint = $"{endpoint.Scheme}://{endpoint.Host}:{endpoint.Port}/api",
     };
     
     var microcksClient = app.CreateMicrocksClient("microcks");

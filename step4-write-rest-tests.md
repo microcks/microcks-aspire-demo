@@ -570,7 +570,7 @@ You're now sure that beyond the technical conformance, the `Order Service` also 
 |--------|----------------|-------------|
 | **Setup** | Custom `WebApplicationFactory` with manual container setup | Reuse existing `AppHost` project |
 | **Container orchestration** | Manual `KafkaBuilder`, `MicrocksContainerEnsemble` | Declarative in `AppHost/Program.cs` |
-| **Port exposure** | `ExposeHostPortsAsync` + manual port allocation | `WithHostNetworkAccess()` built-in |
+| **Network access** | `ExposeHostPortsAsync` + manual port allocation | `GetEndpointForNetwork()` with container network |
 | **Mock endpoint access** | `container.GetRestMockEndpoint()` | `resource.GetRestMockEndpoint()` |
 | **Testing client** | Direct container access | `app.CreateMicrocksClient("microcks")` |
 | **Health checks** | Manual polling | Built-in `WaitForResourceHealthyAsync` |

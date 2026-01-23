@@ -1,0 +1,24 @@
+<Project Sdk="Aspire.AppHost.Sdk/13.0.0">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UserSecretsId>22e95c7d-05c1-48a5-8b45-e1fa64e5bdce</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microcks.Aspire" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <ProjectReference Include="../Order.ServiceApi/Order.ServiceApi.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="resources\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  
+</Project>

@@ -16,8 +16,10 @@
 //
 
 using Aspire.Hosting;
+using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Testing;
 using Microcks.Aspire;
+using Microcks.Aspire.Async;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Projects;
@@ -34,6 +36,16 @@ public sealed class OrderHostAspireFactory : IAsyncDisposable
     /// Gets or sets the Microcks resource used for API mocking.
     /// </summary>
     public required MicrocksResource MicrocksResource;
+
+    /// <summary>
+    /// Gets or sets the Microcks Async Minion resource used for async API testing.
+    /// </summary>
+    public MicrocksAsyncMinionResource? MicrocksAsyncMinionResource { get; private set; }
+
+    /// <summary>
+    /// Gets or sets the Kafka resource.
+    /// </summary>
+    public KafkaServerResource? KafkaResource { get; private set; }
 
     /// <summary>
     /// The distributed application under test.
@@ -72,16 +84,34 @@ public sealed class OrderHostAspireFactory : IAsyncDisposable
         });
 
         this.MicrocksResource = builder.Resources.OfType<MicrocksResource>().Single();
+        this.MicrocksAsyncMinionResource = builder.Resources.OfType<MicrocksAsyncMinionResource>().SingleOrDefault();
+        this.KafkaResource = builder.Resources.OfType<KafkaServerResource>().SingleOrDefault();
 
         this.App = await builder.BuildAsync(TestContext.Current.CancellationToken);
 
         await this.App.StartAsync()
             .ConfigureAwait(true);
 
+        // Wait for Kafka readiness if available
+        if (KafkaResource is not null)
+        {
+            await this.App.ResourceNotifications.WaitForResourceHealthyAsync(
+                KafkaResource.Name, TestContext.Current.CancellationToken)
+                .ConfigureAwait(true);
+        }
+
         // Wait for microcks readiness
         await this.App.ResourceNotifications.WaitForResourceHealthyAsync(
             MicrocksResource.Name, TestContext.Current.CancellationToken)
             .ConfigureAwait(true);
+
+        // Wait for Async Minion readiness if available
+        if (MicrocksAsyncMinionResource is not null)
+        {
+            await this.App.ResourceNotifications.WaitForResourceHealthyAsync(
+                MicrocksAsyncMinionResource.Name, TestContext.Current.CancellationToken)
+                .ConfigureAwait(true);
+        }
 
         // Wait for Order API readiness
         await this.App.ResourceNotifications.WaitForResourceHealthyAsync(

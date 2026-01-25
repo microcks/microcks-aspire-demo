@@ -15,20 +15,20 @@
 //
 //
 
-namespace Order.ServiceApi.UseCases.Model;
+using Order.ServiceApi.UseCases.Model;
+
+namespace Order.ServiceApi.UseCases;
 
 /// <summary>
-/// Represents the status of an order.
+/// Interface for publishing order events to message broker.
 /// </summary>
-public enum OrderStatus
+public interface IEventPublisher
 {
     /// <summary>
-    /// The order has been created.
+    /// Publishes an order created event asynchronously.
     /// </summary>
-    Created,
-
-    /// <summary>
-    /// The order has been validated.
-    /// </summary>
-    Validated,
+    /// <param name="orderEvent">The order event to publish.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task PublishOrderCreatedAsync(OrderEvent orderEvent, CancellationToken cancellationToken = default);
 }

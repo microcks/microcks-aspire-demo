@@ -15,13 +15,15 @@
 //
 //
 
+using Order.ServiceApi;
 using Order.ServiceApi.Client;
 using Order.ServiceApi.Endpoints;
 using Order.ServiceApi.UseCases;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddTransient<OrderUseCase>();
+// Singleton for fake "Repository" inside.
+builder.Services.AddSingleton<OrderUseCase>();
 
 var configuration = builder.Configuration;
 var pastryApiSection = configuration.GetRequiredSection("PastryApi");
@@ -36,6 +38,19 @@ builder.Services.AddHttpClient<PastryAPIClient>(opt =>
 {
     opt.BaseAddress = new Uri(pastryApiUrl + "/");
 });
+
+// Kafka configuration using Aspire
+builder.AddKafkaProducer<string, string>("kafka");
+builder.AddKafkaConsumer<string, string>("kafka", settings =>
+{
+    settings.Config.GroupId = "order-service-group";
+    settings.Config.AutoOffsetReset = Confluent.Kafka.AutoOffsetReset.Earliest;
+    settings.Config.EnableAutoCommit = false;
+});
+
+builder.Services.AddSingleton<IEventPublisher, OrderEventPublisher>();
+builder.Services.AddScoped<IOrderEventProcessor, OrderEventProcessor>();
+builder.Services.AddHostedService<OrderEventConsumerHostedService>();
 
 // Services for API metadata
 builder.Services.AddOpenApi();

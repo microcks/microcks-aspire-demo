@@ -17,20 +17,15 @@
 
 using System.Text.Json;
 using Aspire.Hosting;
-using Aspire.Hosting.ApplicationModel;
-using Aspire.Hosting.Testing;
 using Confluent.Kafka;
 using Confluent.Kafka.Admin;
-using Microcks.Aspire;
-using Microcks.Aspire.Async;
 using Microcks.Aspire.Clients.Model;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
+using Order.ServiceApi.Tests.Fixture;
 using Order.ServiceApi.UseCases;
 using Order.ServiceApi.UseCases.Model;
-using Projects;
 
 namespace Order.ServiceApi.Tests.UseCases;
 
@@ -41,83 +36,46 @@ namespace Order.ServiceApi.Tests.UseCases;
 /// <remarks>
 /// Initializes a new instance of the <see cref="OrderEventPublisherContractTests"/> class.
 /// </remarks>
+/// <param name="fixture">The Aspire factory fixture (shared via collection).</param>
 /// <param name="testOutputHelper">The test output helper for logging.</param>
 [Collection("DisableParallelization")]
-public class OrderEventPublisherContractTests(ITestOutputHelper testOutputHelper) : IAsyncLifetime
+public class OrderEventPublisherContractTests(
+    OrderHostAspireFactory fixture,
+    ITestOutputHelper testOutputHelper) : IAsyncLifetime, IDisposable
 {
+    private readonly OrderHostAspireFactory _fixture = fixture;
     private readonly ITestOutputHelper _testOutputHelper = testOutputHelper;
-    private DistributedApplication? _app;
-    private MicrocksResource? _microcksResource;
-    private KafkaServerResource? _kafkaResource;
 
     /// <summary>
     /// Gets or sets the web application factory for testing.
     /// </summary>
     public WebApplicationFactory<Program>? WebApplicationFactory { get; private set; }
 
+    /// <summary>
+    /// Gets the fixture with logging configured for this test.
+    /// </summary>
+    private OrderHostAspireFactory Fixture
+    {
+        get
+        {
+            _fixture.OutputHelper = _testOutputHelper;
+            return _fixture;
+        }
+    }
+
     /// <inheritdoc/>
     public async ValueTask InitializeAsync()
     {
-        // Create and start the distributed application
-        var builder = await DistributedApplicationTestingBuilder
-            .CreateAsync<Order_AppHost>(TestContext.Current.CancellationToken);
-
-        // Enable resource logging
-        builder.Services.AddLogging(logging =>
-        {
-            logging.SetMinimumLevel(LogLevel.Information);
-            logging.AddFilter("Aspire.", LogLevel.Debug);
-            logging.AddFilter("Aspire.Hosting", LogLevel.Debug);
-            logging.AddXUnit(_testOutputHelper, options =>
-            {
-                options.TimestampFormat = "HH:mm:ss.fff ";
-                options.IncludeScopes = false;
-            });
-        });
-
-        builder.Services.Configure<DistributedApplicationOptions>(options =>
-        {
-            options.DisableDashboard = true;
-        });
-
-        _microcksResource = builder.Resources.OfType<MicrocksResource>().Single();
-        _kafkaResource = builder.Resources.OfType<KafkaServerResource>().SingleOrDefault();
-
-        _app = await builder.BuildAsync(TestContext.Current.CancellationToken);
-        await _app.StartAsync(TestContext.Current.CancellationToken);
-
-        // Wait for resources readiness
-        if (_kafkaResource is not null)
-        {
-            await _app.ResourceNotifications.WaitForResourceHealthyAsync(
-                _kafkaResource.Name, TestContext.Current.CancellationToken);
-        }
-
-        await _app.ResourceNotifications.WaitForResourceHealthyAsync(
-            _microcksResource.Name, TestContext.Current.CancellationToken);
-
-        var microcksAsyncMinionResource = builder.Resources.OfType<MicrocksAsyncMinionResource>().SingleOrDefault();
-        if (microcksAsyncMinionResource is not null)
-        {
-            await _app.ResourceNotifications.WaitForResourceHealthyAsync(
-                microcksAsyncMinionResource.Name, TestContext.Current.CancellationToken);
-        }
-
-        await _app.ResourceNotifications.WaitForResourceHealthyAsync(
-            "order-api", TestContext.Current.CancellationToken);
+        // Ensure the fixture OutputHelper is set for logging
+        _fixture.OutputHelper = _testOutputHelper;
 
         // Get Microcks Pastry API mock endpoint
-        var pastryApiUrl = _microcksResource
+        var pastryApiUrl = Fixture.MicrocksResource
             .GetRestMockEndpoint("API Pastries", "0.0.1")
             .ToString();
 
-        // Get Kafka connection string from Aspire resources
-        string? kafkaConnectionString = null;
-        if (_kafkaResource is not null)
-        {
-            kafkaConnectionString = await _kafkaResource.ConnectionStringExpression
-                .GetValueAsync(TestContext.Current.CancellationToken);
-        }
+        // Get Kafka connection string from shared fixture
+        var kafkaConnectionString = await Fixture.GetKafkaConnectionStringAsync();
 
         // Create WebApplicationFactory for Order.ServiceApi
         this.WebApplicationFactory = new WebApplicationFactory<Program>()
@@ -153,20 +111,14 @@ public class OrderEventPublisherContractTests(ITestOutputHelper testOutputHelper
         {
             await WebApplicationFactory.DisposeAsync();
         }
+    }
 
-        if (_app is not null)
-        {
-            try
-            {
-                await _app.StopAsync(TestContext.Current.CancellationToken);
-            }
-            catch
-            {
-                // swallow, we're tearing down tests
-            }
-
-            await _app.DisposeAsync();
-        }
+    /// <summary>
+    /// Clears the output helper after test completes.
+    /// </summary>
+    public void Dispose()
+    {
+        _fixture.OutputHelper = null;
     }
 
     /// <summary>
@@ -207,7 +159,7 @@ public class OrderEventPublisherContractTests(ITestOutputHelper testOutputHelper
         var orderUseCase = this.WebApplicationFactory.Services.GetRequiredService<OrderUseCase>();
 
         // Create MicrocksClient
-        var microcksClient = _app!.CreateMicrocksClient("microcks");
+        var microcksClient = Fixture.App.CreateMicrocksClient("microcks");
 
         // Launch the Microcks test and wait a bit to be sure it actually connects to Kafka.
         var testRequestTask = microcksClient.TestEndpointAsync(kafkaTest, TestContext.Current.CancellationToken);
@@ -255,13 +207,12 @@ public class OrderEventPublisherContractTests(ITestOutputHelper testOutputHelper
 
     private async Task EnsureTopicExistsAsync(string topic)
     {
-        if (_kafkaResource is null)
+        if (Fixture.KafkaResource is null)
         {
             throw new InvalidOperationException("Kafka resource is not available.");
         }
 
-        var connectionString = await _kafkaResource.ConnectionStringExpression
-            .GetValueAsync(TestContext.Current.CancellationToken);
+        var connectionString = await Fixture.GetKafkaConnectionStringAsync();
 
         using var adminClient = new AdminClientBuilder(new AdminClientConfig
         {

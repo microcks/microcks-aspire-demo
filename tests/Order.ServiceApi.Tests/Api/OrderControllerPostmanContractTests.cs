@@ -33,33 +33,35 @@ namespace Order.ServiceApi.Tests.Api;
 /// <remarks>
 /// Initializes a new instance of the <see cref="OrderControllerPostmanContractTests"/> class.
 /// </remarks>
-/// <param name="fixture">The Aspire factory fixture.</param>
+/// <param name="fixture">The Aspire factory fixture (shared via collection).</param>
 /// <param name="testOutputHelper">The test output helper.</param>
 [Collection("DisableParallelization")]
 public sealed class OrderControllerPostmanContractTests(
     OrderHostAspireFactory fixture,
     ITestOutputHelper testOutputHelper)
-    : IClassFixture<OrderHostAspireFactory>, IAsyncLifetime
+    : IDisposable
 {
     private readonly OrderHostAspireFactory _fixture = fixture;
     private readonly ITestOutputHelper _testOutputHelper = testOutputHelper;
 
     /// <summary>
-    /// Initialize the fixture before any test runs.
+    /// Gets the fixture with logging configured for this test.
     /// </summary>
-    /// <returns>ValueTask representing the asynchronous initialization operation.</returns>
-    public async ValueTask InitializeAsync()
+    public OrderHostAspireFactory Fixture
     {
-        await _fixture.InitializeAsync(_testOutputHelper);
+        get
+        {
+            _fixture.OutputHelper = _testOutputHelper;
+            return _fixture;
+        }
     }
 
     /// <summary>
-    /// Dispose resources used by the fixture.
+    /// Clears the output helper after test completes.
     /// </summary>
-    /// <returns>ValueTask representing the asynchronous dispose operation.</returns>
-    public async ValueTask DisposeAsync()
+    public void Dispose()
     {
-        await _fixture.DisposeAsync();
+        _fixture.OutputHelper = null;
     }
 
     /// <summary>
@@ -74,7 +76,7 @@ public sealed class OrderControllerPostmanContractTests(
     public async Task TestPostmanCollectionContract()
     {
         // Arrange
-        var app = _fixture.App;
+        var app = Fixture.App;
 
         // Use GetEndpointForNetwork with the container network context so that Microcks (running in a container)
         // can access the order-api service from the Aspire container network

@@ -15,15 +15,19 @@
 //
 //
 
+using Order.ServiceApi.Tests.Fixture;
 using Xunit;
 
 namespace Order.ServiceApi.Tests;
 
 /// <summary>
-/// Collection definition that disables parallelization for tests that need sequential execution.
+/// Collection definition that disables parallelization and shares the OrderHostAspireFactory
+/// across all test classes in the collection. This ensures a single Kafka and Microcks
+/// instance is reused for all tests.
 /// </summary>
 [CollectionDefinition("DisableParallelization", DisableParallelization = true)]
-public class DisableParallelizationTestCollection
+public class DisableParallelizationTestCollection : ICollectionFixture<OrderHostAspireFactory>
 {
     // This class has no code, it's only used to define the collection
+    // and share the OrderHostAspireFactory fixture across all tests
 }

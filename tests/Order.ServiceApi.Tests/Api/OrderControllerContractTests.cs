@@ -32,33 +32,36 @@ namespace Order.ServiceApi.Tests.Api;
 /// <remarks>
 /// Initializes a new instance of the <see cref="OrderControllerContractTests"/> class.
 /// </remarks>
-/// <param name="fixture">The Aspire factory fixture.</param>
+/// <param name="fixture">The Aspire factory fixture (shared via collection).</param>
 /// <param name="testOutputHelper">The test output helper.</param>
 [Collection("DisableParallelization")]
 public sealed class OrderControllerContractTests(
     OrderHostAspireFactory fixture,
     ITestOutputHelper testOutputHelper)
-    : IClassFixture<OrderHostAspireFactory>, IAsyncLifetime
+    : IDisposable
 {
     private readonly OrderHostAspireFactory _fixture = fixture;
     private readonly ITestOutputHelper _testOutputHelper = testOutputHelper;
 
     /// <summary>
-    /// Initialize the fixture before any test runs.
+    /// Sets up the test output helper for logging.
     /// </summary>
-    /// <returns>ValueTask representing the asynchronous initialization operation.</returns>
-    public async ValueTask InitializeAsync()
+    public OrderHostAspireFactory Fixture
     {
-        await _fixture.InitializeAsync(_testOutputHelper);
+        get
+        {
+            // Route logs to this test's output
+            _fixture.OutputHelper = _testOutputHelper;
+            return _fixture;
+        }
     }
 
     /// <summary>
-    /// Dispose resources used by the fixture.
+    /// Clears the output helper after test completes.
     /// </summary>
-    /// <returns>ValueTask representing the asynchronous dispose operation.</returns>
-    public async ValueTask DisposeAsync()
+    public void Dispose()
     {
-        await _fixture.DisposeAsync();
+        _fixture.OutputHelper = null;
     }
 
     /// <summary>
@@ -71,7 +74,7 @@ public sealed class OrderControllerContractTests(
     public async Task TestOpenApiContract()
     {
         // Arrange
-        var app = _fixture.App;
+        var app = Fixture.App;
 
         // Use GetEndpointForNetwork with the container network context so that Microcks (running in a container)
         // can access the order-api service from the Aspire container network
@@ -108,7 +111,7 @@ public sealed class OrderControllerContractTests(
     public async Task TestOpenAPIContractAndBusinessConformance()
     {
         // Arrange
-        var app = _fixture.App;
+        var app = Fixture.App;
 
         // Use GetEndpointForNetwork with the container network context so that Microcks (running in a container)
         // can access the order-api service from the Aspire container network (aspire.dev.internal)

@@ -41,6 +41,7 @@ jobs:
         dotnet test --no-build `
         --configuration Release `
         --logger trx `
+        --logger "console;verbosity=detailed" `
         --collect:"XPlat Code Coverage" `
         --results-directory testresults
       shell: pwsh

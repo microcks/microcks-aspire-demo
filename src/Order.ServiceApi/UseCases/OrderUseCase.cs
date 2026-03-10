@@ -30,16 +30,21 @@ public class OrderUseCase
 {
     private readonly ILogger<OrderUseCase> _logger;
     private readonly PastryAPIClient _pastryAPIClient;
+    private readonly IEventPublisher _eventPublisher;
+
+    private readonly Dictionary<string, List<OrderEvent>> _orderRepository = [];
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrderUseCase"/> class.
     /// </summary>
     /// <param name="logger">The logger instance.</param>
     /// <param name="pastryAPIClient">The pastry API client.</param>
-    public OrderUseCase(ILogger<OrderUseCase> logger, PastryAPIClient pastryAPIClient)
+    /// <param name="eventPublisher">The event publisher.</param>
+    public OrderUseCase(ILogger<OrderUseCase> logger, PastryAPIClient pastryAPIClient, IEventPublisher eventPublisher)
     {
         _logger = logger;
         _pastryAPIClient = pastryAPIClient;
+        _eventPublisher = eventPublisher;
     }
 
     /// <summary>
@@ -85,7 +90,66 @@ public class OrderUseCase
             TotalPrice = orderInfo.TotalPrice
         };
 
+        // Emit OrderEvent for creation
+        var orderEvent = new OrderEvent(
+            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+            order,
+            "Creation"
+        );
+        // Persist the order event
+        PersistOrderEvent(orderEvent);
+
+        await _eventPublisher.PublishOrderCreatedAsync(orderEvent, cancellationToken);
+
         return order;
+    }
+
+    /// <summary>
+    /// Persists an order event to the repository.
+    /// </summary>
+    /// <param name="orderEvent">The order event to persist.</param>
+    private void PersistOrderEvent(OrderEvent orderEvent)
+    {
+        if (_orderRepository.TryGetValue(orderEvent.Order.Id, out var events))
+        {
+            // Append to existing events
+            events.Add(orderEvent);
+            return;
+        }
+
+        // First event for this order
+        _orderRepository.Add(orderEvent.Order.Id, [orderEvent]);
+    }
+
+    /// <summary>
+    /// Update an order after review.
+    /// </summary>
+    /// <param name="orderEvent">The order event containing updated order information.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    public Task UpdateReviewedOrderAsync(OrderEvent orderEvent)
+    {
+        // Persist the order event
+        PersistOrderEvent(orderEvent);
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Retrieves an order by its ID.
+    /// </summary>
+    /// <param name="orderId">The order ID to retrieve.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The order if found.</returns>
+    /// <exception cref="OrderNotFoundException">Thrown when the order is not found.</exception>
+    public Task<OrderModel> GetOrderAsync(string orderId, CancellationToken cancellationToken = default)
+    {
+        List<OrderEvent>? orderEvents = _orderRepository.GetValueOrDefault(orderId);
+        if (orderEvents is null || orderEvents.Count == 0)
+        {
+            throw new OrderNotFoundException(orderId);
+        }
+        var lastEvent = orderEvents.Last();
+        return Task.FromResult(lastEvent.Order);
     }
 
     private async Task<bool> CheckPastryAvailabilityAsync(string pastryName, CancellationToken cancellationToken)

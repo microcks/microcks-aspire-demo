@@ -31,16 +31,28 @@ namespace Order.ServiceApi.Tests.Client;
 /// <remarks>
 /// Initializes a new instance of the <see cref="PastryAPIClientTests"/> class.
 /// </remarks>
-/// <param name="fixture">The Aspire factory fixture.</param>
+/// <param name="fixture">The Aspire factory fixture (shared via collection).</param>
 /// <param name="testOutputHelper">The test output helper.</param>
 [Collection("DisableParallelization")]
 public sealed class PastryAPIClientTests(
     OrderHostAspireFactory fixture,
     ITestOutputHelper testOutputHelper)
-    : IClassFixture<OrderHostAspireFactory>, IAsyncLifetime
+    : IAsyncLifetime, IDisposable
 {
     private readonly OrderHostAspireFactory _fixture = fixture;
     private readonly ITestOutputHelper _testOutputHelper = testOutputHelper;
+
+    /// <summary>
+    /// Gets the fixture with logging configured for this test.
+    /// </summary>
+    private OrderHostAspireFactory Fixture
+    {
+        get
+        {
+            _fixture.OutputHelper = _testOutputHelper;
+            return _fixture;
+        }
+    }
 
     /// <summary>
     /// Gets or sets the web application factory for testing.
@@ -56,7 +68,7 @@ public sealed class PastryAPIClientTests(
         Assert.NotNull(this.WebApplicationFactory);
 
         // Arrange
-        DistributedApplication app = _fixture.App;
+        DistributedApplication app = Fixture.App;
         var microcksClient = app.CreateMicrocksClient("microcks");
 
         var pastryAPIClient = this.WebApplicationFactory
@@ -86,7 +98,7 @@ public sealed class PastryAPIClientTests(
         Assert.NotNull(this.WebApplicationFactory);
 
         // Arrange
-        DistributedApplication app = _fixture.App;
+        DistributedApplication app = Fixture.App;
         var microcksClient = app.CreateMicrocksClient("microcks");
         double initialInvocationCount = await microcksClient
             .GetServiceInvocationsCountAsync("API Pastries", "0.0.1", cancellationToken: TestContext.Current.CancellationToken);
@@ -124,12 +136,16 @@ public sealed class PastryAPIClientTests(
     /// <returns>ValueTask representing the asynchronous initialization operation.</returns>
     public async ValueTask InitializeAsync()
     {
-        await _fixture.InitializeAsync(_testOutputHelper);
+        // Ensure the fixture OutputHelper is set for logging
+        _fixture.OutputHelper = _testOutputHelper;
 
         // Get Microcks Pastry API mock endpoint
-        var pastryApiUrl = _fixture.MicrocksResource
+        var pastryApiUrl = Fixture.MicrocksResource
             .GetRestMockEndpoint("API Pastries", "0.0.1")
             .ToString();
+
+        // Get Kafka connection string from shared fixture
+        var kafkaConnectionString = await Fixture.GetKafkaConnectionStringAsync();
 
         // Add services for web/integration tests.
         this.WebApplicationFactory = new WebApplicationFactory<Program>()
@@ -137,6 +153,12 @@ public sealed class PastryAPIClientTests(
             {
                 builder.UseEnvironment("Test"); // Set environment to Test
                 builder.UseSetting("PastryApi:BaseUrl", pastryApiUrl);
+
+                // Configure Kafka connection if available
+                if (!string.IsNullOrEmpty(kafkaConnectionString))
+                {
+                    builder.UseSetting("ConnectionStrings:kafka", kafkaConnectionString);
+                }
             });
     }
 
@@ -150,7 +172,13 @@ public sealed class PastryAPIClientTests(
         {
             await WebApplicationFactory.DisposeAsync();
         }
+    }
 
-        await _fixture.DisposeAsync();
+    /// <summary>
+    /// Clears the output helper after test completes.
+    /// </summary>
+    public void Dispose()
+    {
+        _fixture.OutputHelper = null;
     }
 }

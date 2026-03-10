@@ -15,20 +15,15 @@
 //
 //
 
+using System.Text.Json.Serialization;
+
 namespace Order.ServiceApi.UseCases.Model;
 
 /// <summary>
-/// Represents the status of an order.
+/// Represents an order event for async messaging.
 /// </summary>
-public enum OrderStatus
-{
-    /// <summary>
-    /// The order has been created.
-    /// </summary>
-    Created,
-
-    /// <summary>
-    /// The order has been validated.
-    /// </summary>
-    Validated,
-}
+public sealed record OrderEvent(
+    [property: JsonPropertyName("timestamp")] long Timestamp,
+    [property: JsonPropertyName("order")] Order Order,
+    [property: JsonPropertyName("changeReason")] string ChangeReason
+);

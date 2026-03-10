@@ -15,20 +15,18 @@
 //
 //
 
-namespace Order.ServiceApi.UseCases.Model;
+namespace Order.ServiceApi.UseCases;
 
 /// <summary>
-/// Represents the status of an order.
+/// Service responsible for processing order events from Kafka messages.
 /// </summary>
-public enum OrderStatus
+public interface IOrderEventProcessor
 {
     /// <summary>
-    /// The order has been created.
+    /// Processes an order event message from Kafka.
     /// </summary>
-    Created,
-
-    /// <summary>
-    /// The order has been validated.
-    /// </summary>
-    Validated,
+    /// <param name="messageValue">The JSON message value containing the order event.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task ProcessOrderEventAsync(string messageValue, CancellationToken cancellationToken = default);
 }

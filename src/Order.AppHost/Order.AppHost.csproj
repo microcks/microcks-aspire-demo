@@ -8,6 +8,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Aspire.Hosting" />
+    <PackageReference Include="Aspire.Hosting.Kafka" />
     <PackageReference Include="Microcks.Aspire" />
   </ItemGroup>
   
